@@ -1,0 +1,36 @@
+{% extends "taban.html" %}
+{% block baslik %}Tanımsız Kartlar · Turnike Takip{% endblock %}
+{% block icerik %}
+<div class="sayfa-bas"><h1>Tanımsız Kartlar</h1></div>
+<p class="soluk aciklama">Turnikede okutulmuş ama hiçbir personelde aktif olmayan kartlar. Bu okutmalar günlük listede görünmez; kartı bir personele tanımlayın.</p>
+
+{% if kartlar %}
+<div class="tablo-kap">
+  <table>
+    <thead><tr><th>Kart no</th><th>Okutma</th><th>İlk okutma</th><th>Son okutma</th><th>Personele tanımla</th></tr></thead>
+    <tbody>
+      {% for k in kartlar %}
+      <tr>
+        <th scope="row" class="saat">{{ k.kart_no }}{% if k.eski_kart %}<div class="not">Daha önce kapatılmış kart</div>{% endif %}</th>
+        <td class="saat">{{ k.okutma }}</td>
+        <td class="saat">{{ k.ilk|tarih_saat }}</td>
+        <td class="saat">{{ k.son|tarih_saat }}</td>
+        <td>
+          <form class="satir-form" method="post" action="/kartlar/tanimla"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <input type="hidden" name="kart_no" value="{{ k.kart_no }}">
+            <select name="personel" required aria-label="{{ k.kart_no }} için personel seç">
+              <option value="">Personel seçin</option>
+              {% for p in personeller %}<option value="{{ p.id }}">{{ p.ad }} {{ p.soyad }} ({{ p.sicil_no }})</option>{% endfor %}
+            </select>
+            <button class="ana-dugme">Tanımla</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="bos">Tanımsız kart yok.</p>
+{% endif %}
+{% endblock %}

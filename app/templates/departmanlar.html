@@ -1,0 +1,42 @@
+{% extends "taban.html" %}
+{% block baslik %}Departmanlar · Turnike Takip{% endblock %}
+{% block icerik %}
+<div class="sayfa-bas"><h1>Departmanlar</h1></div>
+
+<section class="panel">
+  <form class="suzgec" method="post" action="/departmanlar"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label class="genis">Yeni departman <input name="ad" maxlength="100" required></label>
+    <button class="ana-dugme">Ekle</button>
+  </form>
+</section>
+
+{% if departmanlar %}
+<div class="tablo-kap">
+  <table>
+    <thead><tr><th>Departman</th><th>Personel</th><th></th></tr></thead>
+    <tbody>
+      {% for d in departmanlar %}
+      <tr>
+        <td>
+          <form class="satir-form" method="post" action="/departmanlar/{{ d.id }}/guncelle"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <input name="ad" value="{{ d.ad }}" maxlength="100" required aria-label="{{ d.ad }} adını değiştir">
+            <button class="dugme">Kaydet</button>
+          </form>
+        </td>
+        <td class="saat">{{ d.personel }}</td>
+        <td>
+          {% if d.personel == 0 %}
+          <form method="post" action="/departmanlar/{{ d.id }}/sil" onsubmit="return confirm('Departman silinsin mi?')"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button class="metin-dugme">Sil</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="bos">Henüz departman yok.</p>
+{% endif %}
+{% endblock %}

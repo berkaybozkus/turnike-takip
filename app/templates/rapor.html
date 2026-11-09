@@ -1,0 +1,109 @@
+{% extends "taban.html" %}
+{% block baslik %}Rapor · Turnike Takip{% endblock %}
+{% block icerik %}
+<div class="sayfa-bas"><h1>Giriş-Çıkış Raporu</h1></div>
+
+{% if hata %}<p class="mesaj hata" role="alert">{{ hata }}</p>{% endif %}
+
+<nav class="durumlar" aria-label="Hazır tarih aralıkları">
+  {% for ad, url, secili in hazir %}
+  <a href="{{ url }}" class="durum-sec" {% if secili %}aria-current="true"{% endif %}>{{ ad }}</a>
+  {% endfor %}
+</nav>
+
+<form class="suzgec" method="get" action="/rapor" id="rapor-formu">
+  <label>Başlangıç <input type="date" name="bas" value="{{ bas.isoformat() }}" required></label>
+  <label>Bitiş <input type="date" name="bit" value="{{ bit.isoformat() }}" required></label>
+  <label class="dar">Gün sayısı <input type="number" id="gun-sayisi" min="1" max="{{ en_fazla_gun }}" value="{{ gun_sayisi }}"></label>
+  <label>Departman
+    <select name="departman">
+      <option value="">Tümü</option>
+      {% for d in departmanlar %}
+      <option value="{{ d.id }}" {% if d.id == departman_id %}selected{% endif %}>{{ d.ad }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Personel
+    <select name="personel">
+      <option value="">Tümü</option>
+      {% for p in personeller %}
+      <option value="{{ p.id }}" {% if p.id == personel_id %}selected{% endif %}>{{ p.ad }} {{ p.soyad }} ({{ p.sicil_no }}){% if not p.aktif %} · pasif{% endif %}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Durum
+    <select name="durum">
+      <option value="">Tümü</option>
+      {% for d in durumlar %}<option value="{{ d }}" {% if d == durum %}selected{% endif %}>{{ d }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="ana-dugme">Listele</button>
+</form>
+
+{% if satirlar %}
+<div class="rapor-bas">
+  <p class="soluk">
+    {{ toplam }} satır
+    {% if toplam > onizleme_siniri %}· ilk {{ onizleme_siniri }} satır gösteriliyor, Excel dosyasında tamamı var{% endif %}
+  </p>
+  <a class="ana-dugme baglanti-dugme" href="{{ excel_adresi }}">Excel indir</a>
+</div>
+
+<div class="tablo-kap">
+  <table>
+    <thead>
+      <tr><th>Tarih</th><th>Sicil</th><th>Ad Soyad</th><th>Departman</th><th>Giriş</th><th>Çıkış</th><th>Durum</th></tr>
+    </thead>
+    <tbody>
+      {% for r in satirlar %}
+      <tr>
+        <td class="saat">{{ r.tarih.strftime("%d.%m.%Y") }}</td>
+        <td class="soluk">{{ r.sicil_no }}</td>
+        <th scope="row">{{ r.ad_soyad }}</th>
+        <td>{{ r.departman or "—" }}</td>
+        <td class="saat">{% if r.giris %}{{ r.giris|saat }}{% elif r.giris_metni == "—" %}—{% else %}<span class="yok">{{ r.giris_metni }}</span>{% endif %}</td>
+        <td class="saat">
+          {% if r.cikis %}{{ r.cikis|saat }}
+          {% elif r.cikis_metni == "—" %}—
+          {% elif r.cikis_metni == "Henüz çıkmadı" %}<span class="bekliyor">{{ r.cikis_metni }}</span>
+          {% else %}<span class="yok">{{ r.cikis_metni }}</span>{% endif %}
+        </td>
+        <td>
+          <span class="rozet {{ r.durum|durum_sinifi }}">{{ r.durum }}</span>
+          {% if r.notu %}<div class="not">{{ r.notu }}</div>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% elif not hata %}
+<p class="bos">Bu aralıkta ve filtrelerde kayıt yok.</p>
+{% endif %}
+
+<script>
+  (function () {
+    const form = document.getElementById("rapor-formu");
+    const bas = form.elements.bas, bit = form.elements.bit;
+    const gun = document.getElementById("gun-sayisi");
+
+    // Saat dilimi kaymasi olmasin diye tarih parcalari yerel olarak islenir.
+    const oku = (metin) => { const [y, a, g] = metin.split("-").map(Number); return new Date(y, a - 1, g); };
+    const yaz = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+
+    gun.addEventListener("input", () => {
+      const n = parseInt(gun.value, 10);
+      if (!n || n < 1 || !bit.value) return;
+      const son = oku(bit.value);
+      bas.value = yaz(new Date(son.getFullYear(), son.getMonth(), son.getDate() - (n - 1)));
+    });
+
+    const gunuGuncelle = () => {
+      if (!bas.value || !bit.value) return;
+      gun.value = Math.round((oku(bit.value) - oku(bas.value)) / 86400000) + 1;
+    };
+    bas.addEventListener("change", gunuGuncelle);
+    bit.addEventListener("change", gunuGuncelle);
+  })();
+</script>
+{% endblock %}

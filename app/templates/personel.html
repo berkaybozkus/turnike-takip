@@ -1,0 +1,64 @@
+{% extends "taban.html" %}
+{% block baslik %}Personel · Turnike Takip{% endblock %}
+{% block icerik %}
+<div class="sayfa-bas"><h1>Personel</h1></div>
+
+<details class="panel" {% if not personeller %}open{% endif %}>
+  <summary>Yeni personel ekle</summary>
+  <form class="suzgec" method="post" action="/personel"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>Sicil no <input name="sicil_no" maxlength="30" placeholder="Boşsa otomatik verilir"></label>
+    <label>Ad <input name="ad" maxlength="80" required></label>
+    <label>Soyad <input name="soyad" maxlength="80" required></label>
+    <label>Departman
+      <select name="departman">
+        <option value="">Seçilmedi</option>
+        {% for d in departmanlar %}<option value="{{ d.id }}">{{ d.ad }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="ana-dugme">Ekle</button>
+  </form>
+</details>
+
+<form class="suzgec" method="get" action="/personel">
+  <label>Durum
+    <select name="durum" onchange="this.form.submit()">
+      <option value="aktif" {% if durum == "aktif" %}selected{% endif %}>Aktif</option>
+      <option value="pasif" {% if durum == "pasif" %}selected{% endif %}>Pasif</option>
+      <option value="tumu" {% if durum == "tumu" %}selected{% endif %}>Tümü</option>
+    </select>
+  </label>
+  <label>Departman
+    <select name="departman" onchange="this.form.submit()">
+      <option value="">Tümü</option>
+      {% for d in departmanlar %}
+      <option value="{{ d.id }}" {% if d.id == departman_id %}selected{% endif %}>{{ d.ad }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="genis">Personel ara
+    <input type="search" name="ara" value="{{ ara }}" placeholder="Ad, soyad veya sicil no">
+  </label>
+  <button class="ana-dugme">Filtrele</button>
+</form>
+
+{% if personeller %}
+<div class="tablo-kap">
+  <table>
+    <thead><tr><th>Sicil</th><th>Ad Soyad</th><th>Departman</th><th>Aktif kart</th><th>Durum</th></tr></thead>
+    <tbody>
+      {% for p in personeller %}
+      <tr>
+        <td class="soluk">{{ p.sicil_no }}</td>
+        <th scope="row"><a href="/personel/{{ p.id }}">{{ p.ad }} {{ p.soyad }}</a></th>
+        <td>{{ p.departman or "—" }}</td>
+        <td class="saat">{% if p.kartlar %}{{ p.kartlar }}{% elif p.aktif %}<span class="yok">Kart yok</span>{% else %}—{% endif %}</td>
+        <td><span class="rozet {{ 'tamam' if p.aktif else 'kayit-yok' }}">{{ "Aktif" if p.aktif else "Pasif" }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="bos">Bu filtrelere uyan personel yok.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,70 @@
+{% from "_ikon.html" import ikon %}
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block baslik %}Turnike Takip{% endblock %}</title>
+  <link rel="stylesheet" href="/static/stil.css">
+</head>
+<body class="{{ 'kabuk' if kullanici else 'giris-govde' }}">
+  {% if kullanici %}
+  {% set yol = request.url.path %}
+  {% set sayfa_adi = {"/": "Günlük takip", "/rapor": "Rapor", "/kartlar": "Tanımsız kartlar", "/departmanlar": "Departmanlar", "/sifre": "Şifre değiştir"}.get(yol, "Personel") %}
+  <aside class="yan">
+    <a class="marka" href="/">
+      <span class="marka-ikon">{{ ikon("turnike") }}</span>
+      <span class="marka-yazi">Turnike <b>Takip</b></span>
+    </a>
+    <div class="baglam">
+      <span class="baglam-ikon">{{ ikon("personel") }}</span>
+      <span><b>İnsan Kaynakları</b><small>Personel giriş takibi</small></span>
+    </div>
+
+    <nav class="yan-menu" aria-label="Ana menü">
+      <p class="menu-baslik">Günlük akış</p>
+      <a href="/" {% if yol == "/" %}aria-current="page"{% endif %}>{{ ikon("gunluk") }}<span>Günlük takip</span></a>
+      <a href="/rapor" {% if yol == "/rapor" %}aria-current="page"{% endif %}>{{ ikon("rapor") }}<span>Rapor</span></a>
+      <p class="menu-baslik">Yönetim</p>
+      <a href="/personel" {% if yol.startswith("/personel") %}aria-current="page"{% endif %}>{{ ikon("personel") }}<span>Personel</span></a>
+      <a href="/kartlar" {% if yol == "/kartlar" %}aria-current="page"{% endif %}>{{ ikon("kart") }}<span>Tanımsız kartlar</span>{% if tanimsiz_kart %}<span class="sayac">{{ tanimsiz_kart }}</span>{% endif %}</a>
+      <a href="/departmanlar" {% if yol == "/departmanlar" %}aria-current="page"{% endif %}>{{ ikon("departman") }}<span>Departmanlar</span></a>
+    </nav>
+
+    {% if demo_mod %}
+    <div class="demo-kart">
+      <b>Demo çalışma alanı</b>
+      <p>Tüm personel ve okutma kayıtları kurgusaldır.{% if canli_demo %} Veriler {{ sifirlama_dakika }} dakikada bir sıfırlanır.{% endif %}</p>
+    </div>
+    {% endif %}
+
+    <div class="yan-alt">
+      <span class="avatar koyu">{{ kullanici|bas_harfler }}</span>
+      <span class="yan-kullanici"><b>{{ kullanici }}</b><a href="/sifre">Şifre değiştir</a></span>
+      <form method="post" action="/cikis"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="cikis-dugme" title="Çıkış yap" aria-label="Çıkış yap">{{ ikon("cikis") }}</button></form>
+    </div>
+  </aside>
+
+  <div class="govde">
+    <header class="ust">
+      <p class="kirinti"><span>Turnike Takip</span><span class="ayrac">/</span><b>{{ sayfa_adi }}</b></p>
+      <div class="ust-sag">
+        {% if senkron.hata %}
+        <span class="sistem hata" role="status"><i></i>Turnike verisi alınamıyor</span>
+        {% else %}
+        <span class="sistem"><i></i>Sistem aktif</span>
+        {% endif %}
+        {% if senkron.son %}<span class="ust-saat">Son güncelleme {{ senkron.son|saat }}</span>{% endif %}
+        <span class="avatar">{{ kullanici|bas_harfler }}</span>
+      </div>
+    </header>
+  {% endif %}
+    <main class="{% block ana_sinif %}icerik{% endblock %}">
+      {% if mesaj %}<p class="mesaj {{ mesaj.tur }}" role="status">{{ mesaj.metin }}</p>{% endif %}
+      {% block icerik %}{% endblock %}
+    </main>
+  {% if kullanici %}
+  </div>
+  {% endif %}
+</body>
+</html>

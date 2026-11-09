@@ -1,0 +1,19 @@
+{% extends "taban.html" %}
+{% block baslik %}Şifre Değiştir · Turnike Takip{% endblock %}
+{% block icerik %}
+<div class="sayfa-bas"><h1>Şifre değiştir</h1></div>
+
+{% if canli_demo %}
+<p class="bos">Canlı demoda şifre değiştirilemez; böylece herkes <b>ik</b> / <b>demo</b> ile giriş yapabilir.</p>
+{% else %}
+<section class="panel dar-panel">
+  <form class="dikey-form" method="post" action="/sifre"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>Mevcut şifre <input type="password" name="mevcut" autocomplete="current-password" required></label>
+    <label>Yeni şifre <input type="password" name="yeni" autocomplete="new-password" minlength="{{ en_kisa }}" maxlength="{{ en_uzun }}" required></label>
+    <label>Yeni şifre (tekrar) <input type="password" name="yeni_tekrar" autocomplete="new-password" minlength="{{ en_kisa }}" maxlength="{{ en_uzun }}" required></label>
+    <p class="soluk kucuk">En az {{ en_kisa }} karakter.</p>
+    <button class="ana-dugme">Şifreyi değiştir</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

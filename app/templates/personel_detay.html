@@ -1,0 +1,59 @@
+{% extends "taban.html" %}
+{% block baslik %}{{ kisi.ad }} {{ kisi.soyad }} · Turnike Takip{% endblock %}
+{% block icerik %}
+<p class="geri"><a href="/personel">‹ Personel listesi</a></p>
+<div class="sayfa-bas">
+  <h1>{{ kisi.ad }} {{ kisi.soyad }} <span class="rozet {{ 'tamam' if kisi.aktif else 'kayit-yok' }}">{{ "Aktif" if kisi.aktif else "Pasif" }}</span></h1>
+  <form method="post" action="/personel/{{ kisi.id }}/durum"
+        {% if kisi.aktif %}onsubmit="return confirm('Personel pasife alınacak ve kartları kapatılacak. Devam edilsin mi?')"{% endif %}><input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <input type="hidden" name="aktif" value="{{ 0 if kisi.aktif else 1 }}">
+    <button class="dugme {{ 'tehlike' if kisi.aktif }}">{{ "Pasife al" if kisi.aktif else "Yeniden aktif et" }}</button>
+  </form>
+</div>
+
+<section class="panel">
+  <h2>Bilgiler</h2>
+  <form class="suzgec" method="post" action="/personel/{{ kisi.id }}/guncelle"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>Sicil no <input name="sicil_no" value="{{ kisi.sicil_no }}" maxlength="30" required></label>
+    <label>Ad <input name="ad" value="{{ kisi.ad }}" maxlength="80" required></label>
+    <label>Soyad <input name="soyad" value="{{ kisi.soyad }}" maxlength="80" required></label>
+    <label>Departman
+      <select name="departman">
+        <option value="">Seçilmedi</option>
+        {% for d in departmanlar %}
+        <option value="{{ d.id }}" {% if d.id == kisi.departman_id %}selected{% endif %}>{{ d.ad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="ana-dugme">Kaydet</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Kartlar</h2>
+  {% if kisi.aktif %}
+  <form class="suzgec" method="post" action="/personel/{{ kisi.id }}/kart"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label class="genis">Yeni kart numarası <input name="kart_no" maxlength="50" pattern="[0-9A-Za-z\-]+" required></label>
+    <button class="ana-dugme">Kart tanımla</button>
+  </form>
+  {% endif %}
+
+  {% if kartlar %}
+  <ul class="kart-liste">
+    {% for k in kartlar %}
+    <li>
+      <span class="saat">{{ k.kart_no }}</span>
+      <span class="rozet {{ 'tamam' if k.aktif else 'kayit-yok' }}">{{ "Aktif" if k.aktif else "Kapalı" }}</span>
+      {% if k.aktif %}
+      <form method="post" action="/kart/{{ k.id }}/kapat" onsubmit="return confirm('Kart kapatılsın mı?')"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="metin-dugme">Kartı kapat</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="soluk">Tanımlı kart yok.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "taban.html" %}
+{% from "_ikon.html" import ikon %}
+{% block baslik %}Giriş · Turnike Takip{% endblock %}
+{% block ana_sinif %}giris-kap{% endblock %}
+{% block icerik %}
+<form class="giris-kutu" method="post" action="/giris"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <div class="marka giris-marka">
+    <span class="marka-ikon">{{ ikon("turnike") }}</span>
+    <span class="marka-yazi">Turnike <b>Takip</b></span>
+  </div>
+  <h1>Hoş geldiniz</h1>
+  <p class="soluk">İnsan Kaynakları paneline giriş yapın.</p>
+  {% if hata %}<p class="uyari" role="alert">{{ hata }}</p>{% endif %}
+  <label>Kullanıcı adı
+    <input name="kullanici_adi" value="{{ kullanici_adi or '' }}" autocomplete="username" required autofocus>
+  </label>
+  <label>Şifre
+    <input name="sifre" type="password" autocomplete="current-password" required>
+  </label>
+  <button class="ana-dugme">Giriş yap</button>
+  {% if canli_demo %}<p class="giris-ipucu">Demo girişi: <b>ik</b> / <b>demo</b>. Veriler kurgusaldır.</p>{% endif %}
+</form>
+{% endblock %}

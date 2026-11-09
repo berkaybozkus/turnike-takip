@@ -1,0 +1,238 @@
+{% extends "taban.html" %}
+{% from "_ikon.html" import ikon %}
+{% block baslik %}Günlük Takip · Turnike Takip{% endblock %}
+{% block icerik %}
+<section class="kahraman">
+  <div class="kahraman-sol">
+    <p class="ust-etiket">İnsan Kaynakları · Turnike takibi</p>
+    <h1>Günün giriş ve çıkışları</h1>
+    <p class="soluk">{{ tarih|uzun_tarih }} için personel kart hareketleri.</p>
+    <form class="tarih-gezin" method="get" action="/">
+      <input type="date" name="tarih" value="{{ tarih.isoformat() }}" aria-label="Tarih seç" onchange="this.form.submit()">
+      <input type="hidden" name="departman" value="{{ departman_id or '' }}">
+      <input type="hidden" name="ara" value="{{ ara }}">
+      <input type="hidden" name="durum" value="{{ durum }}">
+      <a class="dugme kare" href="{{ onceki }}" aria-label="Önceki gün">{{ ikon("geri") }}</a>
+      <a class="dugme kare" href="{{ sonraki }}" aria-label="Sonraki gün">{{ ikon("ileri") }}</a>
+      {% if tarih != bugun %}<a class="dugme" href="{{ bugune_don }}">Bugün</a>{% endif %}
+    </form>
+  </div>
+  <div class="kahraman-sag">
+    <button type="button" class="ana-dugme ikonlu" id="manuel-ac">{{ ikon("arti") }}Manuel kayıt ekle</button>
+  </div>
+</section>
+
+<section class="ozetler" aria-label="Günün özeti">
+  {% for ad, sayi, alt, simge, renk in ozetler %}
+  <article class="ozet">
+    <div class="ozet-ust"><span>{{ ad }}</span><span class="ozet-ikon {{ renk }}">{{ ikon(simge) }}</span></div>
+    <strong>{{ sayi }}</strong>
+    <small>{{ alt }}</small>
+  </article>
+  {% endfor %}
+</section>
+
+<div class="gunluk-izgara">
+  <section class="kart-kutu">
+    <div class="kutu-bas">
+      <div>
+        <h2>Personel giriş ve çıkışları <span class="adet-rozet">{{ satirlar|length }}</span></h2>
+        <p class="soluk kucuk">Kart okutma kayıtlarına göre</p>
+      </div>
+      <a class="dugme ikonlu" href="{{ excel_adresi }}">{{ ikon("excel") }}Excel indir</a>
+    </div>
+
+    <form class="kutu-suzgec" method="get" action="/">
+      <input type="hidden" name="tarih" value="{{ tarih.isoformat() }}">
+      <input type="hidden" name="durum" value="{{ durum }}">
+      <input type="search" name="ara" value="{{ ara }}" placeholder="Ad, soyad veya sicil no ara" aria-label="Personel ara">
+      <select name="departman" aria-label="Departman" onchange="this.form.submit()">
+        <option value="">Tüm departmanlar</option>
+        {% for d in departmanlar %}
+        <option value="{{ d.id }}" {% if d.id == departman_id %}selected{% endif %}>{{ d.ad }}</option>
+        {% endfor %}
+      </select>
+      <button class="dugme">Ara</button>
+    </form>
+
+    <nav class="sekmeler" aria-label="Duruma göre süz">
+      {% for ad, deger, adet, url in secimler %}
+      <a href="{{ url }}" {% if deger == durum %}aria-current="true"{% endif %}>{{ ad }} <span>{{ adet }}</span></a>
+      {% endfor %}
+    </nav>
+
+    {% if satirlar %}
+    <div class="tablo-kap duz">
+      <table>
+        <thead>
+          <tr><th>Personel</th><th>Giriş saati</th><th>Çıkış saati</th><th>Durum</th><th><span class="gizli">Detay</span></th></tr>
+        </thead>
+        {% for s in satirlar %}
+        {% set hareketler = s.sonuc.hareketler or [none] %}
+        <tbody class="{{ s.sonuc.durum|durum_sinifi }}">
+          {% for h in hareketler %}
+          <tr>
+            {% if loop.first %}
+            <th scope="row" rowspan="{{ hareketler|length }}">
+              <span class="kisi">
+                <span class="avatar acik">{{ s.ad_soyad|bas_harfler }}</span>
+                <span><b>{{ s.ad_soyad }}</b><small>{{ s.sicil_no }}{% if s.departman %} · {{ s.departman }}{% endif %}</small></span>
+              </span>
+            </th>
+            {% endif %}
+            {% if h is none %}
+            <td class="soluk">—</td><td class="soluk">—</td>
+            {% else %}
+            <td class="saat">{% if h.giris %}{{ h.giris|saat }}{% else %}<span class="yok">Giriş yok</span>{% endif %}</td>
+            <td class="saat">
+              {% if h.cikis %}{{ h.cikis|saat }}
+              {% elif loop.last and s.sonuc.durum == "İçeride" %}<span class="bekliyor">Henüz çıkmadı</span>
+              {% else %}<span class="yok">Çıkış yok</span>{% endif %}
+            </td>
+            {% endif %}
+            {% if loop.first %}
+            <td rowspan="{{ hareketler|length }}">
+              <span class="rozet {{ s.sonuc.durum|durum_sinifi }}">{{ s.sonuc.durum }}</span>
+              {% if s.sonuc.yonu_bilinmeyen %}
+              <div class="not">Yönü bilinmeyen: {% for z in s.sonuc.yonu_bilinmeyen %}{{ z|saat }}{% if not loop.last %}, {% endif %}{% endfor %}</div>
+              {% endif %}
+            </td>
+            <td rowspan="{{ hareketler|length }}" class="detay"><a href="/personel/{{ s.personel_id }}" aria-label="{{ s.ad_soyad }} detayı">{{ ikon("ileri") }}</a></td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+        {% endfor %}
+      </table>
+    </div>
+    {% else %}
+    <p class="bos duz">Bu filtrelere uyan personel yok.</p>
+    {% endif %}
+  </section>
+
+  <aside class="yan-sutun">
+    <section class="kart-kutu dolgu">
+      <h2>Saatlik hareket</h2>
+      <p class="soluk kucuk">Saatlere göre giriş ve çıkış sayısı</p>
+      {% if grafik %}
+      <div class="lejant">
+        <span><i class="giris"></i>Giriş ({{ grafik.toplam_giris }})</span>
+        <span><i class="cikis"></i>Çıkış ({{ grafik.toplam_cikis }})</span>
+      </div>
+      <div class="grafik-kap">
+        <svg viewBox="0 0 {{ grafik.genislik }} {{ grafik.yukseklik }}" role="img"
+             aria-label="Saatlik hareket grafiği: toplam {{ grafik.toplam_giris }} giriş, {{ grafik.toplam_cikis }} çıkış. Değerler alttaki tabloda.">
+          {% for k in grafik.kilavuzlar %}
+          <line class="kilavuz" x1="{{ grafik.sol }}" x2="{{ grafik.sag_kenar }}" y1="{{ k.y }}" y2="{{ k.y }}"/>
+          <text class="eksen" x="{{ grafik.sol - 5 }}" y="{{ k.y + 3 }}" text-anchor="end">{{ k.deger }}</text>
+          {% endfor %}
+          {% for g in grafik.gruplar %}
+          {% for c in g.cubuklar %}<path class="cubuk {{ c.seri }}" d="{{ c.yol }}"/>{% endfor %}
+          {% if g.etiket %}<text class="eksen" x="{{ g.orta }}" y="{{ grafik.yukseklik - 6 }}" text-anchor="middle">{{ g.etiket }}</text>{% endif %}
+          {% endfor %}
+          {% for z in grafik.zirveler %}<text class="zirve" x="{{ z.x }}" y="{{ z.y }}" text-anchor="middle">{{ z.deger }}</text>{% endfor %}
+          {% for g in grafik.gruplar %}
+          <rect class="isabet" x="{{ g.x }}" y="{{ grafik.ust }}" width="{{ grafik.bant }}" height="{{ grafik.taban - grafik.ust }}"
+                data-saat="{{ g.saat }}" data-giris="{{ g.giris }}" data-cikis="{{ g.cikis }}"/>
+          {% endfor %}
+        </svg>
+        <div class="ipucu" hidden></div>
+      </div>
+      <details class="grafik-tablo">
+        <summary>Tablo olarak göster</summary>
+        <table>
+          <thead><tr><th>Saat</th><th>Giriş</th><th>Çıkış</th></tr></thead>
+          <tbody>{% for g in grafik.tablo %}<tr><td>{{ g.saat }}</td><td>{{ g.giris }}</td><td>{{ g.cikis }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </details>
+      {% else %}
+      <p class="bos-kucuk">Bu gün için hareket yok.</p>
+      {% endif %}
+    </section>
+
+    <section class="kart-kutu dolgu">
+      <h2>Son hareketler</h2>
+      {% if son_hareketler %}
+      <ul class="hareket-liste">
+        {% for h in son_hareketler %}
+        <li>
+          <span class="yon {{ 'g' if h.yon == 'G' else 'c' }}">{{ ikon("giris" if h.yon == "G" else "cikis") }}</span>
+          <span class="hareket-metin"><b>{{ h.ad }} {{ h.soyad }}</b><small>{{ "Giriş" if h.yon == "G" else ("Çıkış" if h.yon == "C" else "Yön bilinmiyor") }}{% if h.cihaz %} · {{ h.cihaz }}{% endif %}</small></span>
+          <time class="saat">{{ h.zaman|saat }}</time>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="bos-kucuk">Bu gün için hareket yok.</p>
+      {% endif %}
+    </section>
+
+    {% if manuel_kayitlar %}
+    <section class="kart-kutu dolgu">
+      <h2>Manuel kayıtlar</h2>
+      <ul class="hareket-liste">
+        {% for m in manuel_kayitlar %}
+        <li>
+          <span class="hareket-metin"><b>{{ m.ad }} {{ m.soyad }}</b><small>{{ m.zaman|saat }} · {{ "Giriş" if m.yon == "G" else "Çıkış" }} · {{ m.cihaz }}</small></span>
+          <form method="post" action="/manuel/{{ m.id }}/sil" onsubmit="return confirm('Manuel kayıt silinsin mi?')"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="metin-dugme">Sil</button></form>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+
+<dialog id="manuel-pencere" class="pencere" aria-labelledby="manuel-baslik">
+  <form method="post" action="/manuel"><input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <h2 id="manuel-baslik">Manuel kayıt ekle</h2>
+    <p class="soluk kucuk">Kart okutulamayan durumlar için. Kayıt "Manuel kayıt" olarak işaretlenir.</p>
+    <label>Personel
+      <select name="personel" required>
+        <option value="">Personel seçin</option>
+        {% for p in personeller %}<option value="{{ p.id }}">{{ p.ad }} {{ p.soyad }} ({{ p.sicil_no }})</option>{% endfor %}
+      </select>
+    </label>
+    <div class="iki-sutun">
+      <label>Tarih <input type="date" name="tarih" value="{{ tarih.isoformat() }}" max="{{ bugun.isoformat() }}" required></label>
+      <label>Saat <input type="time" name="saat" value="{{ suan }}" required></label>
+    </div>
+    <fieldset class="yon-sec">
+      <legend>Hareket</legend>
+      <label><input type="radio" name="yon" value="G" required> Giriş</label>
+      <label><input type="radio" name="yon" value="C" required> Çıkış</label>
+    </fieldset>
+    <div class="pencere-alt">
+      <button type="button" class="dugme" id="manuel-kapat">Vazgeç</button>
+      <button class="ana-dugme">Kaydet</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  (function () {
+    const pencere = document.getElementById("manuel-pencere");
+    document.getElementById("manuel-ac").addEventListener("click", () => pencere.showModal());
+    document.getElementById("manuel-kapat").addEventListener("click", () => pencere.close());
+
+    const kap = document.querySelector(".grafik-kap");
+    if (!kap) return;
+    const ipucu = kap.querySelector(".ipucu");
+    const tasi = (olay) => {
+      const alan = kap.getBoundingClientRect();
+      const x = Math.min(olay.clientX - alan.left + 10, alan.width - ipucu.offsetWidth - 2);
+      ipucu.style.left = Math.max(0, x) + "px";
+      ipucu.style.top = Math.max(0, olay.clientY - alan.top - ipucu.offsetHeight - 8) + "px";
+    };
+    kap.querySelectorAll(".isabet").forEach((alan) => {
+      alan.addEventListener("mouseenter", (olay) => {
+        ipucu.textContent = `${alan.dataset.saat} · Giriş ${alan.dataset.giris} · Çıkış ${alan.dataset.cikis}`;
+        ipucu.hidden = false;
+        tasi(olay);
+      });
+      alan.addEventListener("mousemove", tasi);
+      alan.addEventListener("mouseleave", () => { ipucu.hidden = true; });
+    });
+  })();
+</script>
+{% endblock %}
